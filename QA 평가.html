@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA 평가 시스템 목업</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Tailwind CSS 사용자 정의 설정
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'aio-primary': '#3670C7', // AIO 테마 기본 파란색
+                        'aio-secondary': '#6c757d', // AIO 테마 회색
+                        'aio-light': '#f8f9fa', // AIO 테마 밝은 회색
+                        'aio-dark': '#343a40', // AIO 테마 어두운 회색
+                        'aio-border': '#dee2e6', // AIO 테마 테두리 색상
+                        'score-up': '#16a34a', // 점수 상승 (녹색)
+                        'score-down': '#dc2626', // 점수 하락 (빨간색)
+                        'score-same': '#6b7280', // 점수 동일 (회색)
+                        'goal-achieved': '#16a34a', // 목표 달성 (녹색)
+                        'goal-not-achieved': '#dc2626', // 목표 미달성 (빨간색)
+                    },
+                    fontFamily: {
+                        // 기본 폰트 설정 (Inter 포함)
+                        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', '"Noto Sans"', 'sans-serif', '"Apple Color Emoji"', '"Segoe UI Emoji"', '"Segoe UI Symbol"', '"Noto Color Emoji"'],
+                    },
+                    boxShadow: {
+                        // 기본 그림자 스타일
+                        'aio': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'panel': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' // 사이드 패널 그림자
+                    },
+                    borderRadius: {
+                        // 기본 테두리 둥글기
+                        'aio': '0.375rem',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 기본 스타일 */
+        body { background-color: #f4f7fc; font-family: 'Inter', sans-serif; }
+        /* 카드 스타일 */
+        .aio-card {
+            background-color: white; border-radius: 0.375rem; /* rounded-aio */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* shadow-aio */
+            border: 1px solid #dee2e6; /* border-aio-border */
+            margin-bottom: 1.5rem; padding: 1.5rem;
+        }
+        /* 입력 필드 및 Select 스타일 */
+        select, input[type="text"], input[type="number"], input[type="date"], textarea {
+            border: 1px solid #dee2e6; /* border-aio-border */
+            padding: 0.5rem 0.75rem; border-radius: 0.375rem; /* rounded-aio */
+            width: 100%; font-size: 0.875rem;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+        input[type="date"].w-auto { width: auto; } /* 날짜 입력 필드 너비 자동 조정 */
+        select:focus, input:focus, textarea:focus {
+            border-color: #3670C7; /* focus:border-aio-primary */
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(54, 112, 199, 0.25); /* focus:ring-aio-primary/25 */
+        }
+        /* 테이블 스타일 */
+        .aio-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .aio-table th, .aio-table td {
+            border: 1px solid #dee2e6; /* border-aio-border */
+            padding: 0.75rem; text-align: left; font-size: 0.875rem;
+            vertical-align: middle; word-break: break-all;
+        }
+        .aio-table thead th {
+            background-color: #f8f9fa; /* bg-aio-light */
+            font-weight: 600; color: #495057; cursor: pointer;
+            position: sticky; top: 0; z-index: 10; /* 스티키 헤더 */
+        }
+        /* 정렬 아이콘 SVG 스타일 유지 */
+        .aio-table th .sort-icon { display: inline-block; width: 1em; height: 1em; text-align: center; color: #adb5bd; margin-left: 4px; vertical-align: middle;}
+        .aio-table tbody tr:nth-child(odd):not(.detail-row) { background-color: #f8f9fa; /* bg-aio-light */ }
+        .aio-table tbody tr:not(.detail-row):hover { background-color: #e9ecef; }
+        /* QA 평가 입력 테이블: 첫번째 셀만 커서 적용 */
+        #evaluation-table-body td:first-child { cursor: pointer; }
+        .aio-table td input, .aio-table td textarea, .aio-table td select { font-size: inherit; padding: 0.25rem 0.5rem; }
+        .aio-table td textarea { resize: vertical; min-height: 40px; }
+        /* 버튼 스타일 */
+        .aio-button {
+            display: inline-flex; align-items: center; justify-content: center; padding: 0.5rem 1rem; border-radius: 0.375rem; /* rounded-aio */
+            font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: background-color 0.2s, border-color 0.2s, opacity 0.2s; border: 1px solid transparent;
+        }
+        .aio-button:disabled {
+            opacity: 0.65; cursor: not-allowed;
+        }
+        /* 버튼 내 SVG 아이콘 스타일 유지 */
+        .aio-button svg {
+            width: 1.1em; /* 아이콘 크기 */
+            height: 1.1em;
+            margin-right: 0.5rem; /* 아이콘 오른쪽 마진 */
+            vertical-align: middle;
+        }
+        .aio-button svg.m-0 { margin-right: 0; } /* 마진 제거 클래스 */
+
+        .aio-button-primary { background-color: #3670C7; color: white; border-color: #3670C7; }
+        .aio-button-primary:hover:not(:disabled) { background-color: #2a5a9a; border-color: #2a5a9a; }
+        .aio-button-secondary { background-color: #6c757d; color: white; border-color: #6c757d; }
+        .aio-button-secondary:hover:not(:disabled) { background-color: #5a6268; border-color: #5a6268; }
+        .aio-button-danger { background-color: #dc3545; color: white; border-color: #dc3545; }
+        .aio-button-danger:hover:not(:disabled) { background-color: #c82333; border-color: #c82333; }
+        .aio-button-light { background-color: #f8f9fa; color: #343a40; border-color: #dee2e6; }
+        .aio-button-light:hover:not(:disabled) { background-color: #e2e6ea; border-color: #dae0e5; }
+        /* 페이지네이션 스타일 */
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 1rem; }
+        .pagination button { min-width: 32px; height: 32px; padding: 0 0.5rem; }
+        .pagination button.active { background-color: #3670C7; color: white; border-color: #3670C7; cursor: default; }
+        /* 탭 스타일 */
+        .tab-container { border-bottom: 1px solid #dee2e6; margin-bottom: 1.5rem; }
+        .tab-button {
+            padding: 0.75rem 1.25rem; border: none; background: none; cursor: pointer;
+            font-size: 1rem; font-weight: 500; color: #6c757d; border-bottom: 3px solid transparent;
+            margin-bottom: -1px;
+        }
+        .tab-button.active { color: #3670C7; border-bottom-color: #3670C7; font-weight: 600; }
+        .tab-content { display: none; }
+        /* active 클래스가 붙었을 때 강제로 보이도록 !important 유지 */
+        .tab-content.active {
+            display: block !important;
+        }
+        /* 내 평가 결과 상세 보기 스타일 */
+        .detail-row { display: none; /* 기본 숨김 */ }
+        .detail-row.active { display: table-row; /* 활성화 시 보임 */ }
+        .detail-cell { background-color: #fdfdfe; padding: 1.5rem !important; /* 상세 내용 패딩 */ }
+        /* 상세 테이블 컨테이너: 가로/세로 스크롤 추가 */
+        .detail-table-container {
+            max-height: 320px; /* 상세 테이블 최대 높이 */
+            overflow-y: auto; /* 세로 스크롤 */
+            overflow-x: auto; /* 가로 스크롤 추가 */
+            border: 1px solid #e9ecef;
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+           }
+        .detail-table { width: 100%; border-collapse: collapse; min-width: 900px; /* 너비 증가 */ }
+        .detail-table th { background-color: #e9ecef; font-size: 0.8rem; padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; position: sticky; top: 0; z-index: 5; }
+        .detail-table td { font-size: 0.8rem; padding: 0.5rem; background-color: #fff; border-bottom: 1px solid #e9ecef; vertical-align: top; white-space: nowrap; }
+        /* 상세 테이블 컬럼 너비 조정 후 줄바꿈 설정 */
+        .detail-table td:nth-child(5), /* 항목 규정 */
+        .detail-table td:nth-child(6), /* 만점 포인트 */
+        .detail-table td:nth-child(7) { /* 평가자 코멘트 */
+            white-space: normal; /* 코멘트는 줄바꿈 허용 */
+        }
+        .detail-table tbody tr:last-child td { border-bottom: none; }
+        /* 토글 버튼 텍스트 스타일 */
+        .toggle-detail-button {
+            cursor: pointer; line-height: 1; color: #6c757d; margin-right: 0;
+            background: none; border: none; padding: 0; font-size: 0.8em;
+            width: 1.5em; text-align: center;
+        }
+        /* 점수 비교 텍스트 스타일 */
+        .score-change { margin-left: 4px; font-weight: bold; font-size: 0.9em; display: inline-block; width: 1em; text-align: center;}
+        .score-up { color: #16a34a; }
+        .score-down { color: #dc2626; }
+        .score-same { color: #6b7280; }
+        /* 목표 달성 아이콘 스타일 */
+        .goal-status-icon { font-size: 1.1em; vertical-align: middle; }
+        .goal-achieved { color: #16a34a; } /* 녹색 */
+        .goal-not-achieved { color: #dc2626; } /* 빨간색 */
+        .goal-set { color: #6b7280; } /* 회색 */
+
+        /* 현재 설정된 목표 표시 스타일 */
+        #current-goals-display ul { list-style: none; padding: 0; }
+        #current-goals-display li { 
+            background-color: #f8f9fa; 
+            padding: 0.75rem 1rem; 
+            border-radius: 0.375rem; 
+            margin-bottom: 0.5rem; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            border: 1px solid #dee2e6;
+        }
+        #current-goals-display li .goal-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        #current-goals-display li .goal-info span:first-child { 
+            font-weight: 500; 
+            color: #495057;
+            min-width: 100px;
+        }
+        #current-goals-display li .goal-info span:last-child { 
+            font-weight: 600; 
+            color: #3670C7;
+            min-width: 60px;
+        }
+        #current-goals-display li .goal-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        #current-goals-display li .goal-actions button {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        #current-goals-display li .goal-actions button.edit {
+            background-color: #e9ecef;
+            color: #495057;
+            border: 1px solid #dee2e6;
+        }
+        #current-goals-display li .goal-actions button.delete {
+            background-color: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        #current-goals-display li .goal-actions button:hover {
+            opacity: 0.8;
+        }
+
+        /* 스크롤바 스타일 (선택 사항) */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #a8a8a8; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #888; }
+        .scrollable-cell-content { max-height: 80px; overflow-y: auto; padding-right: 4px; }
+        /* 이모티콘 스타일 */
+        .status-emoji { margin-right: 0.3em; font-size: 0.9em; }
+
+        /* 사이드 패널 스타일 */
+        #criteria-side-panel-overlay {
+            position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5);
+            opacity: 0; transition: opacity 0.3s ease-in-out; z-index: 40;
+            pointer-events: none;
+        }
+        #criteria-side-panel-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #criteria-side-panel {
+            position: fixed; top: 0; right: 0; bottom: 0;
+            width: 90%; max-width: 400px;
+            background-color: white;
+            box-shadow: -2px 0 15px rgba(0,0,0,0.1);
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 50;
+            display: flex; flex-direction: column;
+        }
+        #criteria-side-panel.active {
+            transform: translateX(0);
+        }
+        #criteria-side-panel-content {
+            flex-grow: 1; overflow-y: auto; padding: 1.5rem;
+        }
+        /* 이의 제기 섹션 스타일 */
+        .objection-section-container { /* 가로 배치를 위한 컨테이너 */
+            display: flex;
+            gap: 1.5rem; /* 섹션 간 간격 */
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e9ecef; /* 상단 구분선 */
+        }
+        .objection-section {
+            flex: 1; /* 동일한 너비로 나누기 */
+            padding: 1rem; /* 내부 패딩 */
+            border: 1px solid #dee2e6; /* 테두리 추가 */
+            border-radius: 0.375rem; /* 둥근 모서리 */
+            background-color: #f8f9fa; /* 약간의 배경색 */
+            margin-top: 0;
+            padding-top: 0;
+            border-top: none;
+        }
+        .objection-textarea:disabled {
+             background-color: #e9ecef; /* 비활성화 배경색 */
+             color: #6c757d;
+        }
+
+        /* 커스텀 이의 제기 체크박스 스타일 */
+        .objection-checkbox {
+            appearance: none; /* 기본 모양 숨기기 */
+            -webkit-appearance: none;
+            width: 1.1rem; /* 크기 조정 */
+            height: 1.1rem;
+            border: 2px solid #adb5bd; /* 테두리 */
+            border-radius: 0.25rem; /* 약간 둥글게 */
+            display: inline-block;
+            vertical-align: middle; /* 세로 정렬 */
+            position: relative;
+            cursor: default; /* 클릭 불가 표시 */
+            background-color: #fff; /* 기본 배경색 */
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .objection-checkbox:checked {
+            background-color: #3670C7; /* 체크 시 배경색 (aio-primary) */
+            border-color: #3670C7;
+        }
+        .objection-checkbox:checked::after {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 1px;
+            width: 5px;
+            height: 9px;
+            border: solid white; /* 체크 표시 색상 */
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+    </style>
+</head>
+<body class="p-6 relative">
+
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-semibold text-aio-dark">QA 평가 시스템</h1>
+        <span class="text-sm text-aio-secondary">로그인: <span id="current-counselor-name">이정훈</span> (평가자)</span>
+    </div>
+
+    <div class="tab-container flex flex-wrap">
+        <button class="tab-button active" onclick="switchTab(event, 'tab-eval-input')">QA 평가 입력</button>
+        <button class="tab-button" onclick="switchTab(event, 'tab-other-metrics')">기타 지표 입력</button>
+        <button class="tab-button" onclick="switchTab(event, 'tab-criteria-manage')">평가 기준 관리</button>
+        <button class="tab-button" onclick="switchTab(event, 'tab-my-results')">내 평가 결과</button>
+    </div>
+
+    <div id="tab-eval-input" class="tab-content active">
+        <div class="aio-card">
+            <h2 class="text-lg font-semibold text-aio-dark mb-4 border-b border-aio-border pb-2">상담 정보</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div> <label for="team" class="block text-sm font-medium text-gray-700 mb-1">팀</label> <select id="team" name="team"> <option>상담예약1팀</option> <option>상담예약2팀</option> </select> </div>
+                <div> <label for="part" class="block text-sm font-medium text-gray-700 mb-1">파트</label> <select id="part" name="part"> <option>1파트</option> <option>2파트</option> </select> </div>
+                <div> <label for="counselor" class="block text-sm font-medium text-gray-700 mb-1">상담사</label> <select id="counselor" name="counselor"> <option>홍길동</option> <option>김철수</option> </select> </div>
+                <div> <label for="call_type" class="block text-sm font-medium text-gray-700 mb-1">유형 (콜)</label> <select id="call_type" name="call_type" onchange="updateEvaluationItems()"> <option value="초진/재초진">초진/재초진</option> <option value="재진">재진</option> <option value="일반">일반</option> <option value="시청자">시청자</option> </select> </div>
+                <div> <label for="evaluator" class="block text-sm font-medium text-gray-700 mb-1">평가자</label> <select id="evaluator" name="evaluator"> <option>이정훈</option> <option>권미</option> </select> </div>
+                <div> <label for="eval_date" class="block text-sm font-medium text-gray-700 mb-1">평가일자</label> <input type="date" id="eval_date" name="eval_date" value="2025-04-17"> </div>
+                <div>
+                    <label for="session_round" class="block text-sm font-medium text-gray-700 mb-1">회차</label>
+                    <select id="session_round" name="session_round">
+                        <option value="1">1회차</option>
+                        <option value="2">2회차</option>
+                        <option value="3">3회차</option>
+                        <option value="4">4회차</option>
+                    </select>
+                </div>
+                <div> <label for="recording_id" class="block text-sm font-medium text-gray-700 mb-1">평가번호(녹음ID)</label> <input type="text" id="recording_id" name="recording_id" placeholder="녹음 ID 입력"> </div>
+            </div>
+        </div>
+        <div class="aio-card">
+            <h2 id="evaluation-table-title" class="text-lg font-semibold text-aio-dark mb-4 border-b border-aio-border pb-2">평가 항목 (초진/재초진)</h2>
+            <div class="overflow-y-auto max-h-96 border border-aio-border rounded-aio">
+                <table id="evaluation-table" class="aio-table min-w-full">
+                    <colgroup> <col style="width: 30%;"> <col style="width: 10%;"> <col style="width: 10%;"> <col style="width: 50%;"> </colgroup>
+                    <thead> <tr> <th>평가 항목</th> <th>배점</th> <th class="w-24">점수</th> <th>코멘트</th> </tr> </thead>
+                    <tbody id="evaluation-table-body">
+                        </tbody>
+                    <tfoot> <tr class="font-semibold bg-aio-light sticky bottom-0"> <td class="text-right">합계</td> <td id="total-max-score" class="text-center font-bold">0</td> <td id="total-actual-score" class="text-center text-aio-primary font-bold">0</td> <td></td> </tr> </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="aio-card">
+            <label for="feedback" class="block text-lg font-semibold text-aio-dark mb-2">전체 피드백</label>
+            <textarea id="feedback" name="feedback" rows="4" placeholder="평가에 대한 전체적인 피드백, 잘한 점, 개선점 등을 상세히 입력하세요..."></textarea>
+        </div>
+        <div class="flex justify-end space-x-2 mb-6">
+             <button type="button" class="aio-button aio-button-secondary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>임시저장</button>
+            <button type="button" class="aio-button aio-button-primary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>저장</button>
+            <button type="button" class="aio-button aio-button-secondary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>수정</button>
+            <button type="button" class="aio-button aio-button-danger"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>삭제</button>
+            <button type="button" class="aio-button aio-button-light"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>다운로드 (Excel)</button>
+        </div>
+        <div class="aio-card overflow-x-auto">
+            <h2 class="text-lg font-semibold text-aio-dark mb-4 border-b border-aio-border pb-2">평가 이력 (전체)</h2>
+            <div class="flex flex-wrap items-end gap-4 mb-4">
+                <div class="w-full sm:w-auto md:w-64"> <label for="history_search_term" class="block text-sm font-medium text-gray-700 mb-1">검색어</label> <input type="text" id="history_search_term" placeholder="상담사, 평가자, 평가번호..." class="w-full"> </div>
+                <div class="w-full sm:w-auto"> <label for="history_year" class="block text-sm font-medium text-gray-700 mb-1">년도</label> <select id="history_year" class="w-full sm:w-auto"> <option value="">년도 전체</option><option>2025</option><option>2024</option> </select> </div>
+                <div class="w-full sm:w-auto"> <label for="history_month" class="block text-sm font-medium text-gray-700 mb-1">월</label> <select id="history_month" class="w-full sm:w-auto"> <option value="">월 전체</option><option>4월</option><option>3월</option><option>2월</option> </select> </div>
+                <div class="w-full sm:w-auto"> <label for="history_team" class="block text-sm font-medium text-gray-700 mb-1">팀</label> <select id="history_team" class="w-full sm:w-auto"> <option value="">팀 전체</option><option>상담예약1팀</option><option>상담예약2팀</option> </select> </div>
+                <div class="w-full sm:w-auto"> <label for="history_part" class="block text-sm font-medium text-gray-700 mb-1">파트</label> <select id="history_part" class="w-full sm:w-auto"> <option value="">파트 전체</option><option>1파트</option><option>2파트</option> </select> </div>
+                <div class="w-full sm:w-auto"> <label for="history_call_type" class="block text-sm font-medium text-gray-700 mb-1">유형(콜)</label> <select id="history_call_type" class="w-full sm:w-auto"> <option value="">유형 전체</option><option>초진/재초진</option><option>재진</option><option>일반</option><option>시청자</option> </select> </div>
+                <div class="w-full sm:w-auto">
+                    <label for="history_session_round" class="block text-sm font-medium text-gray-700 mb-1">회차</label>
+                    <select id="history_session_round" name="history_session_round" class="w-full sm:w-auto">
+                        <option value="">회차 전체</option>
+                        <option value="1">1회차</option>
+                        <option value="2">2회차</option>
+                        <option value="3">3회차</option>
+                        <option value="4">4회차</option>
+                    </select>
+                </div>
+                <div class="w-full sm:w-auto"> <label for="history_status" class="block text-sm font-medium text-gray-700 mb-1">상태</label> <select id="history_status" class="w-full sm:w-auto"> <option value="">상태 전체</option><option>저장됨</option><option>임시저장</option> </select> </div>
+                <button type="button" class="aio-button aio-button-light self-end"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>검색</button>
+            </div>
+            <table class="aio-table min-w-full">
+                 <colgroup> <col style="width: 10%;"> <col style="width: 14%;"> <col style="width: 9%;">  <col style="width: 9%;">  <col style="width: 11%;"> <col style="width: 9%;">  <col style="width: 8%;">  <col style="width: 8%;">  <col style="width: 9%;">  <col style="width: 8%;">  <col style="width: 5%;">  </colgroup>
+                <thead> <tr> <th>평가일<span class="sort-icon">▼</span></th> <th>평가번호(ID)<span class="sort-icon">↕</span></th> <th>팀<span class="sort-icon">↕</span></th> <th>파트<span class="sort-icon">↕</span></th> <th>상담사<span class="sort-icon">▲</span></th> <th>유형(콜)<span class="sort-icon">↕</span></th> <th>회차<span class="sort-icon">↕</span></th> <th>총점<span class="sort-icon">↕</span></th> <th>평가자<span class="sort-icon">↕</span></th> <th>상태<span class="sort-icon">↕</span></th> <th>작업</th> </tr> </thead>
+                <tbody>
+                    <tr> <td>2025-03-15</td> <td>REC00123</td> <td>상담예약1팀</td> <td>1파트</td> <td>홍길동</td> <td>초진/재초진</td> <td class="text-center">3회차</td> <td class="text-center">95</td> <td>이정훈</td> <td><span class="inline-flex items-center px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full"><span class="status-emoji">✅</span>저장됨</span></td> <td class="text-center"><a href="#" class="text-aio-primary hover:underline text-sm">조회</a></td> </tr>
+                    <tr> <td>2025-03-10</td> <td>REC00456</td> <td>상담예약2팀</td> <td>2파트</td> <td>김철수</td> <td>재진</td> <td class="text-center">2회차</td> <td class="text-center">88</td> <td>권미</td> <td><span class="inline-flex items-center px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full"><span class="status-emoji">✅</span>저장됨</span></td> <td class="text-center"><a href="#" class="text-aio-primary hover:underline text-sm">조회</a></td> </tr>
+                    <tr> <td>2025-04-01</td> <td>REC00789</td> <td>상담예약1팀</td> <td>2파트</td> <td>박영희</td> <td>일반</td> <td class="text-center">1회차</td> <td class="text-center">-</td> <td>이정훈</td> <td><span class="inline-flex items-center px-2 py-1 text-xs font-semibold text-yellow-700 bg-yellow-100 rounded-full"><span class="status-emoji">📝</span>임시저장</span></td> <td class="text-center"><a href="#" class="text-aio-primary hover:underline text-sm">수정</a></td> </tr>
+                   </tbody>
+            </table>
+            <div class="pagination"> <button class="aio-button aio-button-light" disabled>&lt;</button> <button class="aio-button aio-button-primary active">1</button> <button class="aio-button aio-button-light">2</button> <button class="aio-button aio-button-light">3</button> <span class="text-sm text-gray-500">...</span> <button class="aio-button aio-button-light">10</button> <button class="aio-button aio-button-light">&gt;</button> </div>
+        </div>
+    </div>
+
+    <div id="tab-other-metrics" class="tab-content">
+        <div class="aio-card">
+            <h2 class="text-lg font-semibold text-aio-dark mb-4 border-b border-aio-border pb-2">기타 성과 지표 입력</h2>
+            <p class="text-sm text-gray-600 mb-6">칭찬/불만 접수 내역 또는 코칭 점수를 별도로 기록합니다.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 pb-6 border-b border-aio-border">
+                <div> <label for="other_metric_team" class="block text-sm font-medium text-gray-700 mb-1">팀</label> <select id="other_metric_team" name="other_metric_team"> <option>상담예약1팀</option> <option>상담예약2팀</option> </select> </div>
+                <div> <label for="other_metric_part" class="block text-sm font-medium text-gray-700 mb-1">파트</label> <select id="other_metric_part" name="other_metric_part"> <option>1파트</option> <option>2파트</option> </select> </div>
+                <div> <label for="other_metric_counselor" class="block text-sm font-medium text-gray-700 mb-1">상담사</label> <select id="other_metric_counselor" name="other_metric_counselor"> <option>홍길동</option> <option>김철수</option> <option>박영희</option> <option>이민지</option> </select> </div>
+                <div> <label for="other_metric_date" class="block text-sm font-medium text-gray-700 mb-1">적용 일자</label> <input type="date" id="other_metric_date" name="other_metric_date" value=""> </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div> <label for="compliment_count_input" class="block text-sm font-medium text-gray-700 mb-1">칭찬 건수 👍</label> <input type="number" id="compliment_count_input" name="compliment_count_input" min="0" value="0" class="text-center"> <p class="text-xs text-gray-500 mt-1">해당 일자에 발생한 칭찬 건수를 입력하세요.</p> </div>
+                <div> <label for="complaint_count_input" class="block text-sm font-medium text-gray-700 mb-1">불만 건수 👎</label> <input type="number" id="complaint_count_input" name="complaint_count_input" min="0" value="0" class="text-center"> <p class="text-xs text-gray-500 mt-1">해당 일자에 발생한 불만 건수를 입력하세요.</p> </div>
+                <div> <label for="coaching_score_input" class="block text-sm font-medium text-gray-700 mb-1">코칭 점수 🧑‍🏫</label> <input type="number" id="coaching_score_input" name="coaching_score_input" min="0" max="100" value="0" class="text-center"> <p class="text-xs text-gray-500 mt-1">해당 일자의 코칭 점수를 입력하세요 (0-100).</p> </div>
+            </div>
+            <div class="mt-6 flex justify-end"> <button type="button" class="aio-button aio-button-primary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>지표 저장</button> </div>
+        </div>
+        <div class="aio-card overflow-x-auto">
+             <h2 class="text-lg font-semibold text-aio-dark mb-4 border-b border-aio-border pb-2">기타 지표 이력</h2>
+             <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
+                 <div class="flex gap-2 flex-wrap items-center">
+                     <div class="flex items-center gap-2"> <input type="date" class="w-auto" title="조회 시작일"> <span class="self-center">~</span> <input type="date" class="w-auto" title="조회 종료일"> </div>
+                     <select class="w-auto"> <option>팀 전체</option> <option>상담예약1팀</option> <option>상담예약2팀</option> </select>
+                     <select class="w-auto"> <option>파트 전체</option> <option>1파트</option> <option>2파트</option> </select>
+                     <select class="w-auto"> <option>상담사 전체</option> <option>홍길동</option> <option>김철수</option> </select>
+                     <button type="button" class="aio-button aio-button-light"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>이력 검색</button>
+                 </div>
+             </div>
+             <table class="aio-table min-w-full">
+                 <colgroup> <col style="width: 15%;"> <col style="width: 12%;"> <col style="width: 12%;"> <col style="width: 15%;"> <col style="width: 8%;"> <col style="width: 8%;"> <col style="width: 8%;"> <col style="width: 12%;"> <col style="width: 10%;"> </colgroup>
+                 <thead> <tr> <th>적용 일자<span class="sort-icon">▼</span></th> <th>팀<span class="sort-icon">↕</span></th> <th>파트<span class="sort-icon">↕</span></th> <th>상담사<span class="sort-icon">↕</span></th> <th>칭찬<span class="sort-icon">↕</span></th> <th>불만<span class="sort-icon">↕</span></th> <th>코칭<span class="sort-icon">↕</span></th> <th>입력자<span class="sort-icon">↕</span></th> <th>작업</th> </tr> </thead>
+                 <tbody>
+                     <tr> <td>2025-03-15</td> <td>상담예약1팀</td> <td>1파트</td> <td>홍길동</td> <td class="text-center">2</td> <td class="text-center">0</td> <td class="text-center">90</td> <td>이정훈</td>
+                         <td class="text-center">
+                             <button class="aio-button aio-button-light text-xs p-1"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="m-0 w-4 h-4"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
+                             <button class="aio-button aio-button-danger text-xs p-1 ml-1"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="m-0 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button>
+                         </td>
+                     </tr>
+                     <tr> <td>2025-03-10</td> <td>상담예약2팀</td> <td>2파트</td> <td>김철수</td> <td class="text-center">0</td> <td class="text-center">1</td> <td class="text-center">85</td> <td>권미</td>
+                         <td class="text-center">
+                             <button class="aio-button aio-button-light text-xs p-1"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="m-0 w-4 h-4"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
+                             <button class="aio-button aio-button-danger text-xs p-1 ml-1"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="m-0 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button>
+                         </td>
+                     </tr>
+                    </tbody>
+             </table>
+             <div class="pagination"> <button class="aio-button aio-button-light" disabled>&lt;</button> <button class="aio-button aio-button-primary active">1</button> <button class="aio-button aio-button-light">2</button> <button class="aio-button aio-button-light">&gt;</button> </div>
+        </div>
+    </div>
+
+    <div id="tab-criteria-manage" class="tab-content">
+        <div class="aio-card">
+            <h2 class="text-lg font-semibold text-aio-dark mb-4">평가 기준 관리</h2>
+            <div class="flex flex-wrap gap-4 mb-4 items-end">
+                <div> <label for="manage_call_type_filter" class="block text-sm font-medium text-gray-700 mb-1">콜 유형 필터</label> <select id="manage_call_type_filter" name="manage_call_type_filter" class="w-auto" onchange="filterCriteriaTable()"> <option value="전체">전체</option> <option value="초진/재초진">초진/재초진</option> <option value="재진">재진</option> <option value="일반">일반</option> <option value="시청자">시청자</option> </select> </div>
+                <button type="button" class="aio-button aio-button-light" onclick="filterCriteriaTable()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>조회</button>
+                 <div id="criteria-max-score-sum-display" class="ml-auto text-sm font-semibold text-aio-secondary"></div>
+            </div>
+            <div class="overflow-auto max-h-96 border border-aio-border rounded-aio">
+                <table id="criteria-management-table" class="aio-table min-w-[1000px]">
+                    <colgroup> <col style="width: 10%;"> <col style="width: 15%;"> <col style="width: 8%;"> <col style="width: 27%;"> <col style="width: 27%;"> <col style="width: 13%;"> </colgroup>
+                    <thead> <tr> <th class="sticky top-0 z-10">콜 유형</th> <th class="sticky top-0 z-10">평가 항목</th> <th class="sticky top-0 z-10">배점</th> <th class="sticky top-0 z-10">항목 규정</th> <th class="sticky top-0 z-10">만점 포인트</th> <th class="sticky top-0 z-10">작업</th> </tr> </thead>
+                    <tbody id="criteria-table-body">
+                        <tr data-call-type="초진/재초진"> <td><select onchange="this.closest('tr').setAttribute('data-call-type', this.value); filterCriteriaTable();"><option selected>초진/재초진</option><option>재진</option><option>일반</option><option>시청자</option></select></td> <td><input type="text" value="맞이인사"></td> <td><input type="number" value="5" class="text-center criteria-score" oninput="updateCriteriaTotalScore()"></td> <td><textarea rows="2">고객을 맞이할 때의 첫인사 및 태도</textarea></td> <td><textarea rows="2">밝고 명확한 목소리, 소속/이름 정확히 밝힘, 정중한 인사</textarea></td>
+                            <td class="text-center"> <button type="button" class="aio-button aio-button-danger text-xs p-1" onclick="removeCriteriaItem(this)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="m-0 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button> </td> </tr>
+                        <tr data-call-type="초진/재초진"> <td><select onchange="this.closest('tr').setAttribute('data-call-type', this.value); filterCriteriaTable();"><option selected>초진/재초진</option><option>재진</option><option>일반</option><option>시청자</option></select></td> <td><input type="text" value="고객 정보 확인"></td> <td><input type="number" value="10" class="text-center criteria-score" oninput="updateCriteriaTotalScore()"></td> <td><textarea rows="2">상담 진행에 필요한 고객 정보 확인 절차 준수 여부</textarea></td> <td><textarea rows="2">개인정보보호 안내, 필수 정보(이름, 연락처 등) 누락 없이 확인</textarea></td>
+                            <td class="text-center"> <button type="button" class="aio-button aio-button-danger text-xs p-1" onclick="removeCriteriaItem(this)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="m-0 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button> </td> </tr>
+                         <tr data-call-type="초진/재초진"> <td><select onchange="this.closest('tr').setAttribute('data-call-type', this.value); filterCriteriaTable();"><option selected>초진/재초진</option><option>재진</option><option>일반</option><option>시청자</option></select></td> <td><input type="text" value="경청 태도"></td> <td><input type="number" value="10" class="text-center criteria-score" oninput="updateCriteriaTotalScore()"></td> <td><textarea rows="2">고객의 말을 주의 깊게 듣고 이해하려는 태도. 고객의 감정을 이해하고 적절히 반응하며, 대화의 흐름을 자연스럽게 유지</textarea></td> <td><textarea rows="2">적절한 맞장구, 고객 말 끊지 않음, 메모하며 경청, 고객의 말 요약 확인, 비언어적 표현(목소리 톤 등) 긍정적 유지</textarea></td>
+                             <td class="text-center"> <button type="button" class="aio-button aio-button-danger text-xs p-1" onclick="removeCriteriaItem(this)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="m-0 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button> </td> </tr>
+                         <tr data-call-type="초진/재초진"> <td><select onchange="this.closest('tr').setAttribute('data-call-type', this.value); filterCriteriaTable();"><option selected>초진/재초진</option><option>재진</option><option>일반</option><option>시청자</option></select></td> <td><input type="text" value="문의 내용 파악"></td> <td><input type="number" value="15" class="text-center criteria-score" oninput="updateCriteriaTotalScore()"></td> <td><textarea rows="2">고객 문의의 핵심을 정확히 파악하는 능력</textarea></td> <td><textarea rows="2">핵심 질문 통해 명확화, 재확인 절차</textarea></td>
+                             <td class="text-center"> <button type="button" class="aio-button aio-button-danger text-xs p-1" onclick="removeCriteriaItem(this)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="m-0 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button> </td> </tr>
+                         <tr data-call-type="초진/재초진"> <td><select onchange="this.closest('tr').setAttribute('data-call-type', this.value); filterCriteriaTable();"><option selected>초진/재초진</option><option>재진</option><option>일반</option><option>시청자</option></select></td> <td><input type="text" value="해결 방안 제시"></td> <td><input type="number" value="15" class="text-center criteria-score" oninput="updateCriteriaTotalScore()"></td> <td><textarea rows="2">고객 문제 해결을 위한 적절하고 명확한 방안 제시</textarea></td> <td><textarea rows="2">정확한 정보 기반, 고객 맞춤 해결책, 대안 제시</textarea></td>
+                             <td class="text-center"> <button type="button" class="aio-button aio-button-danger text-xs p-1" onclick="removeCriteriaItem(this)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="m-0 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button> </td> </tr>
+                        <tr data-call-type="재진"> <td><select onchange="this.closest('tr').setAttribute('data-call-type', this.value); filterCriteriaTable();"><option>초진/재초진</option><option selected>재진</option><option>일반</option><option>시청자</option></select></td> <td><input type="text" value="이전 상담 이력 확인"></td> <td><input type="number" value="10" class="text-center criteria-score" oninput="updateCriteriaTotalScore()"></td> <td><textarea rows="2">재진 고객의 이전 상담 내용 확인 및 활용 여부</textarea></td> <td><textarea rows="2">이전 상담 내용 요약 언급, 중복 질문 최소화</textarea></td>
+                            <td class="text-center"> <button type="button" class="aio-button aio-button-danger text-xs p-1" onclick="removeCriteriaItem(this)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="m-0 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button> </td> </tr>
+                        <tr data-call-type="재진"> <td><select onchange="this.closest('tr').setAttribute('data-call-type', this.value); filterCriteriaTable();"><option>초진/재초진</option><option selected>재진</option><option>일반</option><option>시청자</option></select></td> <td><input type="text" value="문의 내용 변화 확인"></td> <td><input type="number" value="10" class="text-center criteria-score" oninput="updateCriteriaTotalScore()"></td> <td><textarea rows="2">이전 문의 대비 현재 고객 상황 변화 확인</textarea></td> <td><textarea rows="2">호전/악화 여부 질문, 추가 불편사항 확인</textarea></td>
+                            <td class="text-center"> <button type="button" class="aio-button aio-button-danger text-xs p-1" onclick="removeCriteriaItem(this)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="m-0 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button> </td> </tr>
+                         <tr data-call-type="재진"> <td><select onchange="this.closest('tr').setAttribute('data-call-type', this.value); filterCriteriaTable();"><option>초진/재초진</option><option selected>재진</option><option>일반</option><option>시청자</option></select></td> <td><input type="text" value="공감 표현"></td> <td><input type="number" value="10" class="text-center criteria-score" oninput="updateCriteriaTotalScore()"></td> <td><textarea rows="2">고객의 상황과 감정에 대한 적절한 공감 표현</textarea></td> <td><textarea rows="2">적절한 공감 어휘 사용, 고객 감정 이해 노력</textarea></td>
+                             <td class="text-center"> <button type="button" class="aio-button aio-button-danger text-xs p-1" onclick="removeCriteriaItem(this)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="m-0 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button> </td> </tr>
+                        <tr data-call-type="일반"> <td><select onchange="this.closest('tr').setAttribute('data-call-type', this.value); filterCriteriaTable();"><option>초진/재초진</option><option>재진</option><option selected>일반</option><option>시청자</option></select></td> <td><input type="text" value="문의 유형 분류"></td> <td><input type="number" value="5" class="text-center criteria-score" oninput="updateCriteriaTotalScore()"></td> <td><textarea rows="2">고객 문의 유형을 정확히 파악하고 분류하는 능력</textarea></td> <td><textarea rows="2">문의 핵심 파악, 관련 부서/담당자 연결 정확성</textarea></td>
+                            <td class="text-center"> <button type="button" class="aio-button aio-button-danger text-xs p-1" onclick="removeCriteriaItem(this)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="m-0 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button> </td> </tr>
+                        <tr data-call-type="시청자"> <td><select onchange="this.closest('tr').setAttribute('data-call-type', this.value); filterCriteriaTable();"><option>초진/재초진</option><option>재진</option><option>일반</option><option selected>시청자</option></select></td> <td><input type="text" value="방송 내용 이해도"></td> <td><input type="number" value="15" class="text-center criteria-score" oninput="updateCriteriaTotalScore()"></td> <td><textarea rows="2">시청자 문의 관련 방송 내용 숙지 및 이해 정도</textarea></td> <td><textarea rows="2">방송 시간, 채널, 주요 내용 등 정확히 안내</textarea></td>
+                            <td class="text-center"> <button type="button" class="aio-button aio-button-danger text-xs p-1" onclick="removeCriteriaItem(this)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="m-0 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button> </td> </tr>
+                       </tbody>
+                </table>
+            </div>
+             <div class="mt-4 flex justify-end space-x-2">
+                 <button type="button" class="aio-button aio-button-secondary" onclick="addCriteriaItem()"> <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+                     항목 추가
+                 </button>
+                 <button type="button" class="aio-button aio-button-primary"> <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                     평가 기준 저장
+                 </button>
+             </div>
+        </div>
+    </div>
+
+    <div id="tab-my-results" class="tab-content">
+        <div class="aio-card">
+            <h2 class="text-lg font-semibold text-aio-dark mb-4 border-b border-aio-border pb-2">다음 평가 목표 설정 (시뮬레이션)</h2>
+            <div class="flex gap-6">
+                <!-- 목표 설정 섹션 -->
+                <div class="flex-1">
+                    <div class="flex flex-wrap items-end gap-4">
+                        <div>
+                            <label for="goal_year" class="block text-sm font-medium text-gray-700 mb-1">평가 년도</label>
+                            <select id="goal_year" name="goal_year" class="w-auto" onchange="loadYearGoals()">
+                                <option value="2024">2024년</option>
+                                <option value="2023">2023년</option>
+                                <option value="2022">2022년</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="goal_round" class="block text-sm font-medium text-gray-700 mb-1">평가 회차</label>
+                            <select id="goal_round" name="goal_round" class="w-auto" onchange="loadRoundGoals()">
+                                <option value="1">1회차</option>
+                                <option value="2">2회차</option>
+                                <option value="3">3회차</option>
+                                <option value="4">4회차</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="goal_call_type" class="block text-sm font-medium text-gray-700 mb-1">목표 콜 유형</label>
+                            <select id="goal_call_type" name="goal_call_type" class="w-auto">
+                                <option value="초진/재초진">초진/재초진</option>
+                                <option value="재진">재진</option>
+                                <option value="일반">일반</option>
+                                <option value="시청자">시청자</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="goal_target_score" class="block text-sm font-medium text-gray-700 mb-1">목표 점수</label>
+                            <input type="number" id="goal_target_score" name="goal_target_score" min="0" max="100" placeholder="0-100" class="w-28">
+                        </div>
+                        <button type="button" class="aio-button aio-button-primary" onclick="setEvaluationGoal()">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                            목표 설정
+                        </button>
+                        <span id="goal-set-feedback" class="text-sm text-green-600 ml-2"></span>
+                    </div>
+                </div>
+
+                <!-- 현재 설정된 목표 표시 섹션 -->
+                <div class="flex-1 border-l border-aio-border pl-6">
+                    <div id="current-goals-display">
+                        <h3 class="text-sm font-semibold text-gray-600 mb-2">현재 설정된 목표 점수</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="aio-card">
+            <h2 class="text-lg font-semibold text-aio-dark mb-4 border-b border-aio-border pb-2">내 평가 결과 조회</h2>
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex items-center">
+                        <span class="text-sm font-medium text-gray-700 mr-2">상담사 :</span>
+                        <span id="my-results-counselor-name" class="text-sm font-semibold text-aio-dark">홍길동</span> </div>
+                    <select id="my_results_year" class="w-auto text-sm" title="년도 선택"> <option value="">년도 전체</option><option>2025</option><option>2024</option> </select>
+                    <select id="my_results_month" class="w-auto text-sm" title="월 선택"> <option value="">월 전체</option><option>4월</option><option>3월</option><option>2월</option> </select>
+                    <select id="my_results_call_type" class="w-auto text-sm" title="유형(콜) 선택"> <option value="">유형(콜) 전체</option><option>초진/재초진</option><option>재진</option><option>일반</option><option>시청자</option> </select>
+                    <button type="button" class="aio-button aio-button-light text-sm py-1.5" onclick="renderMyResults()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>검색</button>
+                </div>
+            </div>
+
+            <table class="aio-table min-w-full mb-6">
+                <colgroup>
+                    <col style="width: 5%;">  <col style="width: 10%;"> <col style="width: 13%;"> <col style="width: 7%;">  <col style="width: 10%;"> <col style="width: 7%;"> <col style="width: 6%;"> <col style="width: 10%;"> <col style="width: 26%;"> <col style="width: 6%;">  </colgroup>
+                <thead>
+                    <tr>
+                        <th></th> <th>평가일<span class="sort-icon">▼</span></th>
+                        <th>평가번호(ID)<span class="sort-icon">↕</span></th>
+                        <th class="text-center">회차<span class="sort-icon">↕</span></th>
+                        <th>유형(콜)<span class="sort-icon">↕</span></th>
+                        <th class="text-center">총점<span class="sort-icon">↕</span></th>
+                        <th class="text-center">목표<br>달성<span class="sort-icon">↕</span></th>
+                        <th>평가자<span class="sort-icon">↕</span></th>
+                        <th>전체 피드백(요약)<span class="sort-icon">↕</span></th>
+                        <th class="text-center">이의<br>제기<span class="sort-icon">↕</span></th>
+                    </tr>
+                </thead>
+                <tbody id="my-results-summary-body">
+                    </tbody>
+            </table>
+
+            <div class="pagination">
+                <button class="aio-button aio-button-light" disabled>&lt;</button>
+                <button class="aio-button aio-button-primary active">1</button>
+                <button class="aio-button aio-button-light">2</button>
+                <button class="aio-button aio-button-light">&gt;</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="criteria-side-panel-overlay" onclick="hideSidePanel()"></div> <div id="criteria-side-panel">
+        <div class="flex justify-between items-center p-4 border-b border-aio-border bg-aio-light">
+            <h3 class="text-lg font-semibold text-aio-dark">평가 기준 상세</h3>
+            <button onclick="hideSidePanel()" class="text-aio-secondary hover:text-aio-dark">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 m-0"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+            </button>
+        </div>
+        <div id="criteria-side-panel-content">
+            <div class="mb-4">
+                <h4 class="text-sm font-semibold text-gray-600 mb-1">평가 항목</h4>
+                <p id="panel-item-name" class="text-lg font-semibold text-aio-dark"></p>
+            </div>
+            <div class="mb-4">
+                <h4 class="text-sm font-semibold text-gray-600 mb-1">항목 규정</h4>
+                <p id="panel-item-rule" class="text-sm text-gray-700 whitespace-pre-wrap"></p>
+            </div>
+            <div>
+                <h4 class="text-sm font-semibold text-gray-600 mb-1">만점 포인트</h4>
+                <p id="panel-item-points" class="text-sm text-gray-700 whitespace-pre-wrap"></p>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- 유틸리티 함수 ---
+        const $ = (selector) => document.querySelector(selector);
+        const $$ = (selector) => document.querySelectorAll(selector);
+        const currentCounselor = '홍길동'; // 현재 로그인한 상담사 (예시)
+
+        // --- 데이터 (목업용) ---
+        // 상담사별 목표 점수 데이터
+        let userGoals = {
+            '홍길동': {
+                '2024': {
+                    '1': { // 1회차
+                        '초진/재초진': 90,
+                        '재진': 85,
+                        '일반': 80,
+                        '시청자': 75
+                    },
+                    '2': { // 2회차
+                        '초진/재초진': 92,
+                        '재진': 87,
+                        '일반': 82,
+                        '시청자': 77
+                    },
+                    '3': {}, // 3회차 (빈 객체로 초기화)
+                    '4': {}  // 4회차 (빈 객체로 초기화)
+                },
+                '2023': {
+                    '1': {
+                        '초진/재초진': 88,
+                        '재진': 83,
+                        '일반': 78,
+                        '시청자': 73
+                    },
+                    '2': {
+                        '초진/재초진': 90,
+                        '재진': 85,
+                        '일반': 80,
+                        '시청자': 75
+                    },
+                    '3': {},
+                    '4': {}
+                }
+            },
+            '김철수': {}
+        };
+
+        // 상담사별 평가 결과 데이터 (예시 - 코멘트 추가)
+        const evaluationResults = {
+            '홍길동': [
+                { id: 'eval-001', date: '2025-03-15', recordingId: 'REC00123', round: '3회차', callType: '초진/재초진', totalScore: 95, evaluator: '이정훈', feedbackSummary: '전반적으로 우수. 끝 인사 보완 필요...', hasObjection: true, objectionText: '경청 태도 점수 관련하여 이의 제기합니다. 당시 고객의 말이 길어져 부득이하게 정리하며 안내했습니다.', evaluatorResponse: '확인 결과, 고객 발화가 길어진 점은 인정되나, 조금 더 부드럽게 정리할 수 있었습니다. 다음 평가 시 참고하겠습니다.',
+                  details: [
+                      { name: '맞이인사', maxScore: 5, score: 5, change: 'up', rule: '고객을 맞이할 때의 첫인사 및 태도', points: '밝고 명확한 목소리, 소속/이름 정확히 밝힘, 정중한 인사', comment: '매우 잘함. 이전 평가 대비 개선됨.' },
+                      { name: '고객 정보 확인', maxScore: 10, score: 10, change: 'same', rule: '상담 진행에 필요한 고객 정보 확인 절차 준수 여부', points: '개인정보보호 안내, 필수 정보(이름, 연락처 등) 누락 없이 확인', comment: '누락 없이 정확히 확인. (유지)' },
+                      { name: '경청 태도', maxScore: 10, score: 9, change: 'down', rule: '고객의 말을 주의 깊게 듣고 이해하려는 태도. 고객의 감정을 이해하고 적절히 반응하며, 대화의 흐름을 자연스럽게 유지', points: '적절한 맞장구, 고객 말 끊지 않음, 메모하며 경청, 고객의 말 요약 확인, 비언어적 표현(목소리 톤 등) 긍정적 유지', comment: '가끔 고객 말을 끊는 경향 있음. 개선 필요.' },
+                      { name: '문의 내용 파악', maxScore: 15, score: 14, change: 'same', rule: '고객 문의의 핵심을 정확히 파악하는 능력', points: '핵심 질문 통해 명확화, 재확인 절차', comment: '대체로 잘 파악함.' },
+                      { name: '해결 방안 제시', maxScore: 15, score: 15, change: 'up', rule: '고객 문제 해결을 위한 적절하고 명확한 방안 제시', points: '정확한 정보 기반, 고객 맞춤 해결책, 대안 제시', comment: '매우 명확하게 제시함.' }
+                  ] },
+                { id: 'eval-003', date: '2025-04-10', recordingId: 'REC00850', round: '4회차', callType: '초진/재초진', totalScore: 97, evaluator: '이정훈', feedbackSummary: '목표 달성! 특히 경청 태도 개선됨.', hasObjection: false, objectionText: '', evaluatorResponse: '',
+                  details: [
+                       { name: '맞이인사', maxScore: 5, score: 5, change: 'same', rule: '고객을 맞이할 때의 첫인사 및 태도', points: '밝은 목소리 유지 잘하고 있음.' },
+                       { name: '고객 정보 확인', maxScore: 10, score: 10, change: 'same', rule: '상담 진행에 필요한 고객 정보 확인 절차 준수 여부', points: '정확함.' },
+                       { name: '경청 태도', maxScore: 10, score: 10, change: 'up', rule: '고객의 말을 주의 깊게 듣고 이해하려는 태도...', points: '적절한 맞장구...', comment: '이전 피드백 반영하여 고객 말 끊지 않고 잘 경청함. 훌륭함!' },
+                       { name: '문의 내용 파악', maxScore: 15, score: 15, change: 'up', rule: '고객 문의의 핵심을 정확히 파악하는 능력', points: '핵심 질문 통해 명확화...', comment: '핵심 질문 통해 정확히 파악함.' },
+                       { name: '해결 방안 제시', maxScore: 15, score: 15, change: 'same', rule: '고객 문제 해결을 위한 적절하고 명확한 방안 제시', points: '정확한 정보 기반...', comment: '고객 맞춤 해결책 제시 우수.' }
+                  ] },
+                { id: 'eval-004', date: '2025-04-12', recordingId: 'REC00901', round: '1회차', callType: '재진', totalScore: 90, evaluator: '권미', feedbackSummary: '재진 응대 양호하나 목표 점수 미달.', hasObjection: false, objectionText: '', evaluatorResponse: '',
+                  details: [
+                      { name: '이전 상담 이력 확인', maxScore: 10, score: 10, change: 'same', rule: '재진 고객의 이전 상담 내용 확인 및 활용 여부', points: '이전 상담 내용 요약 언급...', comment: '이전 이력 확인 및 활용 좋음.' },
+                      { name: '문의 내용 변화 확인', maxScore: 10, score: 9, change: 'down', rule: '이전 문의 대비 현재 고객 상황 변화 확인', points: '호전/악화 여부 질문...', comment: '추가 불편사항 확인 질문 누락.' },
+                      { name: '공감 표현', maxScore: 10, score: 9, change: 'down', rule: '고객의 상황과 감정에 대한 적절한 공감 표현', points: '적절한 공감 어휘 사용...', comment: '다소 형식적인 공감 표현. 개선 필요.' }
+                  ] },
+            ],
+            '김철수': [
+                { id: 'eval-002', date: '2025-02-28', recordingId: 'REC00456', round: '2회차', callType: '재진', totalScore: 91, evaluator: '권미', feedbackSummary: '공감 표현 자연스러움...', hasObjection: false, objectionText: '', evaluatorResponse: '',
+                  details: [
+                      { name: '이전 상담 이력 확인', maxScore: 10, score: 10, change: 'same', rule: '재진 고객의 이전 상담 내용 확인 및 활용 여부', points: '이전 상담 내용 요약 언급...', comment: '양호.' },
+                      { name: '문의 내용 변화 확인', maxScore: 10, score: 10, change: 'same', rule: '이전 문의 대비 현재 고객 상황 변화 확인', points: '호전/악화 여부 질문...', comment: '변화 내용 잘 확인 함.' },
+                      { name: '공감 표현', maxScore: 10, score: 10, change: 'up', rule: '고객의 상황과 감정에 대한 적절한 공감 표현', points: '적절한 공감 어휘 사용...', comment: '매우 자연스러움.' }
+                  ] },
+            ]
+        };
+
+
+        // --- 탭 기능 ---
+        function switchTab(event, tabId) {
+            console.log(`탭 전환: ${tabId}`);
+            $$('.tab-content').forEach(content => content.classList.remove('active'));
+            $$('.tab-button').forEach(button => button.classList.remove('active'));
+            const targetContent = $(`#${tabId}`);
+            if (targetContent) {
+                targetContent.classList.add('active');
+                if (tabId === 'tab-my-results') {
+                    // 내 평가 결과 탭 활성화 시 필요한 데이터 로드 및 렌더링
+                    const counselorNameEl = $('#my-results-counselor-name');
+                    if (counselorNameEl) counselorNameEl.textContent = currentCounselor;
+                    displayCurrentGoals(); // 현재 설정된 목표 표시
+                    renderMyResults(); // 평가 결과 목록 렌더링
+                }
+            } else {
+                console.error(`ID가 ${tabId}인 콘텐츠를 찾을 수 없습니다.`);
+            }
+            event.currentTarget.classList.add('active');
+        }
+
+        // --- QA 평가 입력 관련 ---
+        const evaluationTableBody = $('#evaluation-table-body');
+        const evaluationTableTitle = $('#evaluation-table-title');
+        const totalMaxScoreEl = $('#total-max-score');
+        const totalActualScoreEl = $('#total-actual-score');
+
+        // 평가 기준 데이터를 기반으로 평가 항목 테이블 렌더링
+        function renderEvaluationItemsFromCriteria(items) {
+            if (!evaluationTableBody) return;
+            evaluationTableBody.innerHTML = '';
+            let totalMaxScore = 0;
+            items.forEach(item => {
+                const maxScoreValue = parseInt(item.maxScore) || 0;
+                totalMaxScore += maxScoreValue;
+                const row = document.createElement('tr');
+                row.setAttribute('data-item-name', item.name);
+                row.classList.add('eval-item-row');
+                row.innerHTML = `
+                    <td class="font-medium text-aio-dark">${item.name}</td>
+                    <td class="text-center">${maxScoreValue}</td>
+                    <td><input type="number" class="actual-score-input text-center" min="0" max="${maxScoreValue}" value="${item.score !== undefined ? item.score : 0}" oninput="updateTotalScore()"></td>
+                    <td><textarea rows="1" placeholder="코멘트 입력...">${item.comment || ''}</textarea></td>
+                `;
+                evaluationTableBody.appendChild(row);
+            });
+            if (totalMaxScoreEl) totalMaxScoreEl.textContent = totalMaxScore;
+            updateTotalScore(); // 초기 총점 계산
+        }
+
+        // 실제 입력 점수 합계 업데이트
+        function updateTotalScore() {
+            if (!totalActualScoreEl) return;
+            let totalActualScore = 0;
+            $$('#evaluation-table-body .actual-score-input').forEach(input => {
+                const maxScore = parseInt(input.max) || 0;
+                let currentValue = parseInt(input.value) || 0;
+                // 입력값이 배점을 초과하거나 음수일 경우 조정
+                if (currentValue > maxScore) { currentValue = maxScore; input.value = maxScore; }
+                if (currentValue < 0) { currentValue = 0; input.value = 0; }
+                totalActualScore += currentValue;
+            });
+            totalActualScoreEl.textContent = totalActualScore;
+        }
+
+        // 콜 유형 변경 시 평가 항목 업데이트
+        function updateEvaluationItems() {
+            const callTypeSelect = $('#call_type');
+            const selectedCallType = callTypeSelect?.value;
+            const criteriaTableBody = $('#criteria-table-body');
+            if (!selectedCallType || !evaluationTableTitle || !criteriaTableBody || !evaluationTableBody) {
+                console.error("평가 항목 업데이트에 필요한 요소가 없습니다."); return;
+            }
+            evaluationTableTitle.textContent = `평가 항목 (${selectedCallType})`;
+            const criteriaRows = $$('#criteria-table-body tr');
+            const extractedItems = [];
+            // 평가 기준 관리 테이블에서 현재 선택된 콜 유형에 맞는 항목만 추출
+            criteriaRows.forEach(row => {
+                const rowCallType = row.getAttribute('data-call-type') || row.querySelector('td:first-child select')?.value;
+                if (rowCallType === selectedCallType) {
+                    const nameInput = row.querySelector('td:nth-child(2) input[type="text"]');
+                    const scoreInput = row.querySelector('td:nth-child(3) input[type="number"].criteria-score');
+                    if (nameInput && scoreInput) {
+                        extractedItems.push({ name: nameInput.value, maxScore: parseInt(scoreInput.value) || 0 });
+                    }
+                }
+            });
+            renderEvaluationItemsFromCriteria(extractedItems); // 추출된 항목으로 평가 테이블 다시 렌더링
+        }
+
+        // --- 평가 기준 관리 관련 ---
+        const criteriaTableBodyManage = $('#criteria-table-body');
+        const criteriaFilterSelect = $('#manage_call_type_filter');
+        const criteriaMaxScoreSumDisplay = $('#criteria-max-score-sum-display');
+
+        // 콜 유형 필터에 따라 평가 기준 테이블 필터링 및 배점 합계 계산
+        function filterCriteriaTable() {
+             if (!criteriaFilterSelect || !criteriaTableBodyManage || !criteriaMaxScoreSumDisplay) {
+                 console.error("평가 기준 필터링에 필요한 요소가 없습니다."); return;
+             }
+            const selectedType = criteriaFilterSelect.value;
+            let currentTypeTotalScore = 0;
+            const rows = $$('#criteria-table-body tr');
+            rows.forEach(row => {
+                const rowCallType = row.getAttribute('data-call-type') || row.querySelector('td:first-child select')?.value;
+                const scoreInput = row.querySelector('.criteria-score');
+                const score = parseInt(scoreInput?.value) || 0;
+                if (selectedType === '전체' || rowCallType === selectedType) {
+                    row.style.display = ''; // 필터 조건에 맞으면 행 보이기
+                    if (rowCallType === selectedType) currentTypeTotalScore += score; // 선택된 유형의 배점 합산
+                } else {
+                    row.style.display = 'none'; // 필터 조건에 안 맞으면 행 숨기기
+                }
+            });
+            // 선택된 유형의 배점 합계 표시 업데이트
+            if (selectedType !== '전체') {
+                criteriaMaxScoreSumDisplay.textContent = `${selectedType} 배점 합계: ${currentTypeTotalScore}`;
+            } else {
+                criteriaMaxScoreSumDisplay.textContent = '유형별 합계: (특정 유형 선택 시 표시)';
+            }
+        }
+        // 평가 기준 항목 삭제
+        function removeCriteriaItem(button) {
+            const row = button.closest('tr');
+            if (row && confirm('이 평가 기준 항목을 삭제하시겠습니까?')) {
+                 row.remove();
+                 updateCriteriaTotalScore(); // 삭제 후 배점 합계 업데이트
+                 updateEvaluationItems(); // QA 평가 입력 탭에도 반영
+            }
+        }
+        // 평가 기준 항목 추가
+        function addCriteriaItem() {
+             if (!criteriaTableBodyManage || !criteriaFilterSelect) return;
+            const newRow = document.createElement('tr');
+            const selectedFilterType = criteriaFilterSelect.value !== '전체' ? criteriaFilterSelect.value : '초진/재초진'; // 기본값 설정
+            newRow.setAttribute('data-call-type', selectedFilterType);
+            newRow.innerHTML = `<td> <select onchange="this.closest('tr').setAttribute('data-call-type', this.value); filterCriteriaTable();"> <option ${selectedFilterType === '초진/재초진' ? 'selected' : ''}>초진/재초진</option> <option ${selectedFilterType === '재진' ? 'selected' : ''}>재진</option> <option ${selectedFilterType === '일반' ? 'selected' : ''}>일반</option> <option ${selectedFilterType === '시청자' ? 'selected' : ''}>시청자</option> </select> </td> <td><input type="text" placeholder="새 평가 항목"></td> <td><input type="number" value="0" class="text-center criteria-score" oninput="updateCriteriaTotalScore()"></td> <td><textarea rows="2" placeholder="항목 규정"></textarea></td> <td><textarea rows="2" placeholder="만점 포인트"></textarea></td> <td class="text-center"> <button type="button" class="aio-button aio-button-danger text-xs p-1" onclick="removeCriteriaItem(this)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="m-0 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button> </td>`;
+            criteriaTableBodyManage.appendChild(newRow);
+            filterCriteriaTable(); // 추가 후 필터링 및 배점 합계 업데이트
+        }
+        // 평가 기준 배점 변경 시 합계 업데이트
+        function updateCriteriaTotalScore() { filterCriteriaTable(); }
+
+        // --- 목표 설정 기능 ---
+        function setEvaluationGoal() {
+            const year = $('#goal_year').value;
+            const round = $('#goal_round').value;
+            const goalCallTypeEl = $('#goal_call_type');
+            const goalScoreEl = $('#goal_target_score');
+            const feedbackEl = $('#goal-set-feedback');
+
+            if (!goalCallTypeEl || !goalScoreEl || !feedbackEl) {
+                console.error("목표 설정 요소를 찾을 수 없습니다.");
+                return;
+            }
+
+            const callType = goalCallTypeEl.value;
+            const targetScore = parseInt(goalScoreEl.value);
+
+            // 유효성 검사
+            if (isNaN(targetScore) || targetScore < 0 || targetScore > 100) {
+                feedbackEl.textContent = '⚠️ 목표 점수는 0점에서 100점 사이로 입력해주세요.';
+                feedbackEl.className = 'text-sm text-red-600 ml-2';
+                setTimeout(() => { feedbackEl.textContent = ''; }, 3000);
+                return;
+            }
+
+            // 목표 데이터 업데이트
+            if (!userGoals[currentCounselor]) {
+                userGoals[currentCounselor] = {};
+            }
+            if (!userGoals[currentCounselor][year]) {
+                userGoals[currentCounselor][year] = {};
+            }
+            if (!userGoals[currentCounselor][year][round]) {
+                userGoals[currentCounselor][year][round] = {};
+            }
+            userGoals[currentCounselor][year][round][callType] = targetScore;
+
+            console.log(`목표 설정: ${currentCounselor} - ${year}년 ${round}회차 - ${callType} - ${targetScore}점`);
+            feedbackEl.textContent = `✅ ${year}년 ${round}회차 '${callType}' 유형 목표 점수 (${targetScore}점)가 설정되었습니다.`;
+            feedbackEl.className = 'text-sm text-green-600 ml-2';
+            setTimeout(() => { feedbackEl.textContent = ''; }, 3000);
+
+            displayCurrentGoals();
+            renderMyResults();
+        }
+
+        // 현재 설정된 목표 점수 표시 함수
+        function displayCurrentGoals() {
+            const displayArea = $('#current-goals-display');
+            if (!displayArea) return;
+
+            const year = $('#goal_year').value;
+            const round = $('#goal_round').value;
+            const goals = userGoals[currentCounselor]?.[year]?.[round] || {};
+
+            if (Object.keys(goals).length === 0) {
+                displayArea.innerHTML = `<p class="text-sm text-gray-500">${year}년 ${round}회차에 설정된 목표가 없습니다.</p>`;
+                return;
+            }
+
+            let goalsHtml = `<h3 class="text-sm font-semibold text-gray-600 mb-2">${year}년 ${round}회차 목표 점수</h3><ul>`;
+            for (const callType in goals) {
+                goalsHtml += `
+                    <li>
+                        <div class="goal-info">
+                            <span>${callType}</span>
+                            <span>${goals[callType]}점</span>
+                        </div>
+                    </li>`;
+            }
+            goalsHtml += '</ul>';
+            displayArea.innerHTML = goalsHtml;
+        }
+
+        // 년도 변경 시 목표 로드 함수
+        function loadYearGoals() {
+            displayCurrentGoals();
+        }
+
+        // 회차 변경 시 목표 로드 함수
+        function loadRoundGoals() {
+            displayCurrentGoals();
+        }
+
+        // --- 내 평가 결과 관련 ---
+        const myResultsBody = $('#my-results-summary-body');
+
+        // 내 평가 결과 목록 렌더링
+        function renderMyResults() {
+            if (!myResultsBody) return;
+
+            const results = evaluationResults[currentCounselor] || [];
+            const yearFilter = $('#my_results_year').value;
+            const monthFilter = $('#my_results_month').value;
+            const callTypeFilter = $('#my_results_call_type').value;
+
+            myResultsBody.innerHTML = ''; // 기존 내용 초기화
+
+            // 필터링된 결과만 렌더링
+            results.filter(result => {
+                let show = true;
+                if (yearFilter && !result.date.startsWith(yearFilter)) show = false;
+                if (monthFilter) {
+                    const resultMonth = new Date(result.date).getMonth() + 1;
+                    const filterMonth = parseInt(monthFilter.replace('월',''));
+                    if (resultMonth !== filterMonth) show = false;
+                }
+                if (callTypeFilter && result.callType !== callTypeFilter) show = false;
+                return show;
+            }).forEach(result => {
+                // 목표 달성 여부 확인 및 아이콘 설정
+                const targetScore = userGoals[currentCounselor]?.[result.round]?.[result.callType];
+                let goalStatusHtml = '-';
+                let goalAchievedClass = '';
+                if (targetScore !== undefined) {
+                    if (result.totalScore >= targetScore) {
+                        goalStatusHtml = `<span class="goal-status-icon goal-achieved" title="목표 달성! (목표: ${targetScore}점)">✅</span>`;
+                        goalAchievedClass = 'goal-achieved';
+                    } else {
+                        goalStatusHtml = `<span class="goal-status-icon goal-not-achieved" title="목표 미달성 (목표: ${targetScore}점)">❌</span>`;
+                        goalAchievedClass = 'goal-not-achieved';
+                    }
+                } else {
+                     goalStatusHtml = '<span class="goal-status-icon goal-set" title="해당 유형 목표 미설정">➖</span>';
+                }
+
+                // 요약 행 생성
+                const summaryRow = document.createElement('tr');
+                summaryRow.classList.add('summary-row');
+                summaryRow.setAttribute('data-evaluation-id', result.id);
+                summaryRow.innerHTML = `
+                    <td class="text-center">
+                        <button class="toggle-detail-button" onclick="toggleDetail(this)">▶</button>
+                    </td>
+                    <td>${result.date}</td>
+                    <td>${result.recordingId}</td>
+                    <td class="text-center">${result.round}</td>
+                    <td>${result.callType}</td>
+                    <td class="text-center">${result.totalScore}</td>
+                    <td class="text-center">${goalStatusHtml}</td>
+                    <td>${result.evaluator}</td>
+                    <td class="truncate">${result.feedbackSummary}</td>
+                    <td class="text-center"> <input type="checkbox" class="objection-checkbox" disabled ${result.hasObjection ? 'checked' : ''} title="이의 제기 ${result.hasObjection ? '있음' : '없음'}">
+                    </td>
+                `;
+                myResultsBody.appendChild(summaryRow);
+
+                // 상세 정보 행 생성 (초기 숨김)
+                const detailRow = document.createElement('tr');
+                detailRow.classList.add('detail-row');
+                let detailTableHtml = `
+                    <h3 class="text-md font-semibold text-aio-dark mb-3">상세 평가 내용 (${result.recordingId}, ${result.date}, ${result.round})</h3>
+                    <div class="detail-table-container overflow-x-auto">
+                        <table class="detail-table">
+                            <colgroup> <col style="width: 16%;"> <col style="width: 7%;"> <col style="width: 8%;"> <col style="width: 8%;"> <col style="width: 20%;"> <col style="width: 20%;"><col style="width: 21%;"> </colgroup>
+                            <thead> <tr> <th>평가 항목</th> <th>배점</th> <th class="text-center">목표 점수</th> <th class="text-center">내 점수</th> <th>항목 규정</th> <th>만점 포인트</th> <th>평가자 코멘트</th> </tr> </thead>
+                            <tbody>`;
+
+                // 상세 평가 항목 렌더링
+                if (result.details && Array.isArray(result.details)) {
+                    result.details.forEach(detail => {
+                        const detailTargetScore = '-'; // 항목별 목표는 미구현
+                        let scoreChangeHtml = ''; // 점수 변화 아이콘
+                        if(detail.change === 'up') scoreChangeHtml = '<span class="score-change score-up">▲</span>';
+                        else if(detail.change === 'down') scoreChangeHtml = '<span class="score-change score-down">▼</span>';
+                        else if(detail.change === 'same') scoreChangeHtml = '<span class="score-change score-same">-</span>';
+
+                        // 코멘트가 없거나 비어있으면 '-' 표시
+                        const displayComment = detail.comment && detail.comment.trim() !== '' ? detail.comment : '-';
+
+                        detailTableHtml += `
+                            <tr>
+                                <td>${detail.name || '-'}</td>
+                                <td class="text-center">${detail.maxScore || '-'}</td>
+                                <td class="text-center">${detailTargetScore}</td>
+                                <td class="text-center">${detail.score !== undefined ? detail.score : '-'} ${scoreChangeHtml}</td>
+                                <td>${detail.rule || '-'}</td>
+                                <td>${detail.points || '-'}</td>
+                                <td class="${detail.change === 'down' ? 'text-red-600' : ''}">${displayComment}</td>
+                            </tr>`;
+                    });
+                } else {
+                    detailTableHtml += '<tr><td colspan="7" class="text-center text-gray-500">상세 평가 항목 데이터가 없습니다.</td></tr>';
+                }
+
+
+                detailTableHtml += `</tbody></table></div>`;
+
+                // 전체 피드백 및 이의 제기 섹션 추가
+                detailTableHtml += `
+                    <h4 class="text-sm font-semibold text-aio-dark mt-4 mb-1">전체 피드백 :</h4>
+                    <p class="text-sm text-gray-700 mb-4">${result.feedbackSummary}</p>
+                    <div class="objection-section-container">
+                        <div class="objection-section counselor-objection-section">
+                            <h4 class="text-sm font-semibold text-aio-dark mb-1">이의 제기(상담사)</h4>
+                            <textarea class="objection-textarea counselor-objection-textarea w-full text-sm" rows="3" placeholder="평가 결과에 대한 이의 제기 내용을 입력하세요..." ${result.objectionText ? 'disabled' : ''}>${result.objectionText || ''}</textarea>
+                            <div class="objection-status counselor-objection-status text-xs text-green-600 mt-1 mb-2 h-4">${result.objectionText ? '✅ 이의 제기가 저장되었습니다.' : ''}</div>
+                            <div class="flex justify-end space-x-2 mt-2">
+                                <button type="button" class="save-objection-btn counselor-save-objection-btn aio-button aio-button-primary text-xs py-1 px-2" ${result.objectionText ? 'disabled' : ''}> <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> 저장 </button>
+                                <button type="button" class="edit-objection-btn counselor-edit-objection-btn aio-button aio-button-secondary text-xs py-1 px-2" ${!result.objectionText ? 'disabled' : ''}> <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg> 수정 </button>
+                                <button type="button" class="delete-objection-btn counselor-delete-objection-btn aio-button aio-button-danger text-xs py-1 px-2" ${!result.objectionText ? 'disabled' : ''}> <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg> 삭제 </button>
+                            </div>
+                        </div>
+                        <div class="objection-section evaluator-objection-section">
+                             <h4 class="text-sm font-semibold text-aio-dark mb-1">평가자 답변</h4>
+                             <textarea class="objection-textarea evaluator-objection-textarea w-full text-sm" rows="3" placeholder="이의 제기에 대한 평가자 답변 내용을 입력하세요..." ${result.evaluatorResponse ? 'disabled' : ''}>${result.evaluatorResponse || ''}</textarea>
+                             <div class="objection-status evaluator-objection-status text-xs text-green-600 mt-1 mb-2 h-4">${result.evaluatorResponse ? '✅ 답변이 저장되었습니다.' : ''}</div>
+                             <div class="flex justify-end space-x-2 mt-2">
+                                 <button type="button" class="save-objection-btn evaluator-save-objection-btn aio-button aio-button-primary text-xs py-1 px-2" ${result.evaluatorResponse ? 'disabled' : ''}> <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> 답변 저장 </button>
+                                 <button type="button" class="edit-objection-btn evaluator-edit-objection-btn aio-button aio-button-secondary text-xs py-1 px-2" ${!result.evaluatorResponse ? 'disabled' : ''}> <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg> 수정 </button>
+                                 <button type="button" class="delete-objection-btn evaluator-delete-objection-btn aio-button aio-button-danger text-xs py-1 px-2" ${!result.evaluatorResponse ? 'disabled' : ''}> <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg> 삭제 </button>
+                             </div>
+                        </div>
+                    </div>`;
+
+                detailRow.innerHTML = `<td colspan="10" class="detail-cell">${detailTableHtml}</td>`;
+                myResultsBody.appendChild(detailRow);
+            });
+        }
+
+
+        // 상세 정보 토글 함수
+        function toggleDetail(button) {
+            const summaryRow = button.closest('.summary-row');
+            const detailRow = summaryRow?.nextElementSibling;
+            if (detailRow && detailRow.classList.contains('detail-row')) {
+                const isActive = detailRow.classList.toggle('active'); // active 클래스 토글
+                button.textContent = isActive ? '▼' : '▶'; // 버튼 텍스트 변경
+
+                // 하나만 열리도록 다른 열린 상세 정보 닫기
+                if (isActive) {
+                    $$('#my-results-summary-body .detail-row.active').forEach(openDetailRow => {
+                        if (openDetailRow !== detailRow) {
+                            openDetailRow.classList.remove('active');
+                            const correspondingButton = openDetailRow.previousElementSibling?.querySelector('.toggle-detail-button');
+                            if(correspondingButton) correspondingButton.textContent = '▶';
+                        }
+                    });
+                }
+            }
+        }
+
+        // --- 사이드 패널 관련 ---
+        const sidePanelOverlay = $('#criteria-side-panel-overlay');
+        const sidePanel = $('#criteria-side-panel');
+        const panelItemName = $('#panel-item-name');
+        const panelItemRule = $('#panel-item-rule');
+        const panelItemPoints = $('#panel-item-points');
+
+        // 평가 기준 상세 정보 사이드 패널 표시
+        function showSidePanel(itemName, callType) {
+             if (!criteriaTableBodyManage || !panelItemName || !panelItemRule || !panelItemPoints || !sidePanelOverlay || !sidePanel) {
+                 console.error("사이드 패널 표시에 필요한 요소가 없습니다."); return;
+             }
+            const criteriaRows = $$('#criteria-table-body tr');
+            let foundRule = '해당 기준 정보를 찾을 수 없습니다.';
+            let foundPoints = '-';
+            // 평가 기준 관리 테이블에서 해당 항목 정보 찾기
+            for (const row of criteriaRows) {
+                const rowCallType = row.getAttribute('data-call-type') || row.querySelector('td:first-child select')?.value;
+                const nameInput = row.querySelector('td:nth-child(2) input[type="text"]');
+                if (rowCallType === callType && nameInput && nameInput.value === itemName) {
+                    const ruleTextarea = row.querySelector('td:nth-child(4) textarea');
+                    const pointsTextarea = row.querySelector('td:nth-child(5) textarea');
+                    foundRule = ruleTextarea ? ruleTextarea.value : '정보 없음';
+                    foundPoints = pointsTextarea ? pointsTextarea.value : '정보 없음';
+                    break;
+                }
+            }
+            // 패널 내용 업데이트 및 표시
+            panelItemName.textContent = itemName;
+            panelItemRule.textContent = foundRule;
+            panelItemPoints.textContent = foundPoints;
+            sidePanelOverlay.classList.add('active');
+            sidePanel.classList.add('active');
+        }
+        // 사이드 패널 숨기기
+        function hideSidePanel() {
+            if (sidePanelOverlay && sidePanel) {
+                sidePanelOverlay.classList.remove('active');
+                sidePanel.classList.remove('active');
+            }
+        }
+        // QA 평가 입력 테이블의 항목 이름 클릭 시 사이드 패널 표시 이벤트 리스너
+        if (evaluationTableBody) {
+             evaluationTableBody.addEventListener('click', (event) => {
+                 const targetCell = event.target.closest('td');
+                 const targetRow = event.target.closest('.eval-item-row');
+                 // 첫 번째 셀(항목 이름) 클릭 시
+                 if (targetRow && targetCell && targetRow.cells[0] === targetCell) {
+                     const itemName = targetRow.getAttribute('data-item-name');
+                     const currentCallType = $('#call_type')?.value;
+                     if (itemName && currentCallType) {
+                         showSidePanel(itemName, currentCallType);
+                     }
+                 }
+             });
+        }
+
+        // --- 이의 제기 기능 관련 ---
+        if (myResultsBody) {
+            // 이의 제기 섹션 내 버튼 클릭 이벤트 리스너 (이벤트 위임 사용)
+            myResultsBody.addEventListener('click', (event) => {
+                const button = event.target.closest('.save-objection-btn, .edit-objection-btn, .delete-objection-btn');
+                if (!button) return; // 관련 버튼이 아니면 종료
+
+                const objectionSection = button.closest('.objection-section');
+                if (!objectionSection) return;
+
+                const isCounselorSection = objectionSection.classList.contains('counselor-objection-section');
+                const sectionPrefix = isCounselorSection ? 'counselor' : 'evaluator';
+                const textarea = objectionSection.querySelector(`.${sectionPrefix}-objection-textarea`);
+                const saveBtn = objectionSection.querySelector(`.${sectionPrefix}-save-objection-btn`);
+                const editBtn = objectionSection.querySelector(`.${sectionPrefix}-edit-objection-btn`);
+                const deleteBtn = objectionSection.querySelector(`.${sectionPrefix}-delete-objection-btn`);
+                const statusDiv = objectionSection.querySelector(`.${sectionPrefix}-objection-status`);
+                const summaryRow = objectionSection.closest('.detail-row')?.previousElementSibling;
+                const checkbox = summaryRow?.querySelector('td:last-child input[type="checkbox"]'); // 요약 행의 체크박스
+
+                if (!textarea || !saveBtn || !editBtn || !deleteBtn || !statusDiv) {
+                    console.error("이의 제기 섹션의 요소를 찾을 수 없습니다.", sectionPrefix); return;
+                }
+
+                statusDiv.textContent = ''; // 상태 메시지 초기화
+                const messagePrefix = isCounselorSection ? '이의 제기' : '답변';
+
+                // 저장 버튼 클릭 시
+                if (button.classList.contains('save-objection-btn')) {
+                    textarea.disabled = true; // 텍스트 영역 비활성화
+                    saveBtn.disabled = true; // 저장 버튼 비활성화
+                    editBtn.disabled = false; // 수정 버튼 활성화
+                    deleteBtn.disabled = false; // 삭제 버튼 활성화
+                    statusDiv.textContent = `✅ ${messagePrefix}가 저장되었습니다.`;
+                    if (checkbox) checkbox.checked = true; // 이의 제기 체크박스 활성화
+                    setTimeout(() => { statusDiv.textContent = ''; }, 3000); // 3초 후 메시지 숨김
+                    console.log(`${sectionPrefix} Objection saved:`, textarea.value);
+                    // TODO: 실제 데이터 저장 로직 추가 (evaluationResults 업데이트 등)
+
+                // 수정 버튼 클릭 시
+                } else if (button.classList.contains('edit-objection-btn')) {
+                    textarea.disabled = false; // 텍스트 영역 활성화
+                    saveBtn.disabled = false; // 저장 버튼 활성화
+                    editBtn.disabled = true; // 수정 버튼 비활성화
+                    deleteBtn.disabled = true; // 삭제 버튼 비활성화
+                    textarea.focus(); // 텍스트 영역에 포커스
+                    statusDiv.textContent = '📝 수정 중...';
+                    console.log(`Editing ${sectionPrefix} objection...`);
+
+                // 삭제 버튼 클릭 시
+                } else if (button.classList.contains('delete-objection-btn')) {
+                    if (confirm(`${messagePrefix} 내용을 삭제하시겠습니까?`)) {
+                        textarea.value = ''; // 텍스트 영역 내용 삭제
+                        textarea.disabled = false; // 텍스트 영역 활성화 (새로 입력 가능하도록)
+                        saveBtn.disabled = false; // 저장 버튼 활성화
+                        editBtn.disabled = true; // 수정 버튼 비활성화
+                        deleteBtn.disabled = true; // 삭제 버튼 비활성화
+                        statusDiv.textContent = `🗑️ ${messagePrefix}가 삭제되었습니다.`;
+                        setTimeout(() => { statusDiv.textContent = ''; }, 3000);
+                        console.log(`${sectionPrefix} Objection deleted.`);
+                        // TODO: 실제 데이터 삭제 로직 추가 (evaluationResults 업데이트 등)
+
+                        // 상담사 이의 제기와 평가자 답변 모두 없으면 체크박스 해제
+                        const detailRow = objectionSection.closest('.detail-row');
+                        if (detailRow && checkbox) {
+                            const otherPrefix = isCounselorSection ? 'evaluator' : 'counselor';
+                            const otherTextarea = detailRow.querySelector(`.${otherPrefix}-objection-textarea`);
+                            if ((!otherTextarea || otherTextarea.value.trim() === '') && textarea.value.trim() === '') {
+                                checkbox.checked = false;
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- 초기화 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // 평가일자, 적용일자 기본값 오늘 날짜로 설정
+            const today = new Date().toISOString().split('T')[0];
+            const evalDateInput = $('#eval_date');
+            if (evalDateInput && !evalDateInput.value) evalDateInput.value = today;
+            const otherMetricDateInput = $('#other_metric_date');
+            if (otherMetricDateInput && !otherMetricDateInput.value) otherMetricDateInput.value = today;
+
+            // 로그인한 상담사 이름 표시
+            const counselorNameSpan = $('#current-counselor-name');
+            if(counselorNameSpan) counselorNameSpan.textContent = currentCounselor;
+
+            // 약간의 지연 후 초기 데이터 로드 및 렌더링 실행 (DOM 요소 로드 보장)
+            setTimeout(() => {
+                if (typeof updateEvaluationItems === 'function') { updateEvaluationItems(); } // QA 평가 입력 항목 초기 로드
+                if (typeof filterCriteriaTable === 'function') { filterCriteriaTable(); } // 평가 기준 테이블 초기 필터링
+
+                // 첫 번째 탭 활성화 (내 평가 결과 렌더링 포함)
+                const firstTabButton = $('.tab-button');
+                if(firstTabButton) {
+                    const onclickAttr = firstTabButton.getAttribute('onclick');
+                    const match = onclickAttr ? onclickAttr.match(/'([^']+)'/) : null;
+                    if (match && match[1]) {
+                        const firstTabId = match[1];
+                        switchTab({ currentTarget: firstTabButton }, firstTabId);
+                    } else { console.error("첫 번째 탭의 ID를 추출할 수 없습니다."); }
+                }
+            }, 50); // 50ms 지연
+        });
+
+        // --- 평가 기준 관리 기능 ---
+        function addEvaluationItem() {
+            const mallType = $('#mall_type_filter').value;
+            const callType = mallType === '전체' ? '' : $('#call_type_filter').value;
+            const itemName = $('#item_name').value;
+            const itemDescription = $('#item_description').value;
+            const itemScore = parseInt($('#item_score').value);
+            const itemWeight = parseInt($('#item_weight').value);
+
+            // 유효성 검사
+            if (!itemName || !itemDescription || isNaN(itemScore) || isNaN(itemWeight)) {
+                alert('모든 필드를 입력해주세요.');
+                return;
+            }
+
+            // 새로운 평가 항목 생성
+            const newItem = {
+                id: Date.now(), // 임시 ID
+                mallType: mallType,
+                callType: callType,
+                name: itemName,
+                description: itemDescription,
+                score: itemScore,
+                weight: itemWeight,
+                status: '활성'
+            };
+
+            // 평가 항목 목록에 추가
+            evaluationItems.push(newItem);
+
+            // 입력 필드 초기화
+            $('#item_name').value = '';
+            $('#item_description').value = '';
+            $('#item_score').value = '';
+            $('#item_weight').value = '';
+
+            // 평가 항목 목록 업데이트
+            renderEvaluationItems();
+        }
+
+    </script>
+
+</body>
+</html>
