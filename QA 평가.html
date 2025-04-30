@@ -1037,6 +1037,28 @@
                 detailTableHtml += `
                     <h4 class="text-sm font-semibold text-aio-dark mt-4 mb-1">전체 피드백 :</h4>
                     <p class="text-sm text-gray-700 mb-4">${result.feedbackSummary}</p>
+                    
+                    <!-- 상담사 의견 섹션 추가 -->
+                    <div class="counselor-feedback-section mt-4">
+                        <h4 class="text-sm font-semibold text-aio-dark mb-1">상담사 의견</h4>
+                        <textarea class="counselor-feedback-textarea w-full text-sm" rows="3" placeholder="평가 결과에 대한 상담사 의견을 입력하세요..." ${result.counselorFeedback ? 'disabled' : ''}>${result.counselorFeedback || ''}</textarea>
+                        <div class="counselor-feedback-status text-xs text-green-600 mt-1 mb-2 h-4">${result.counselorFeedback ? '✅ 상담사 의견이 저장되었습니다.' : ''}</div>
+                        <div class="flex justify-end space-x-2 mt-2">
+                            <button type="button" class="save-feedback-btn aio-button aio-button-primary text-xs py-1 px-2" ${result.counselorFeedback ? 'disabled' : ''}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                저장
+                            </button>
+                            <button type="button" class="edit-feedback-btn aio-button aio-button-secondary text-xs py-1 px-2" ${!result.counselorFeedback ? 'disabled' : ''}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                                수정
+                            </button>
+                            <button type="button" class="delete-feedback-btn aio-button aio-button-danger text-xs py-1 px-2" ${!result.counselorFeedback ? 'disabled' : ''}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                                삭제
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="objection-section-container">
                         <div class="objection-section counselor-objection-section">
                             <h4 class="text-sm font-semibold text-aio-dark mb-1">이의 제기(상담사)</h4>
@@ -1289,6 +1311,126 @@
 
             // 평가 항목 목록 업데이트
             renderEvaluationItems();
+        }
+
+        let counselorFeedback = {
+            isEditing: false,
+            content: ''
+        };
+
+        function toggleFeedbackEdit() {
+            const textarea = document.getElementById('counselor-feedback');
+            const editBtn = document.getElementById('edit-feedback-btn');
+            const saveBtn = document.getElementById('save-feedback-btn');
+            
+            counselorFeedback.isEditing = !counselorFeedback.isEditing;
+            
+            if (counselorFeedback.isEditing) {
+                textarea.readOnly = false;
+                textarea.classList.add('border-blue-500');
+                editBtn.textContent = '✖️ 취소';
+                saveBtn.style.display = 'inline-flex';
+            } else {
+                textarea.readOnly = true;
+                textarea.classList.remove('border-blue-500');
+                editBtn.textContent = '✏️ 수정';
+                saveBtn.style.display = 'none';
+                textarea.value = counselorFeedback.content;
+            }
+        }
+
+        function saveCounselorFeedback() {
+            const textarea = document.getElementById('counselor-feedback');
+            counselorFeedback.content = textarea.value;
+            
+            // 저장 성공 메시지 표시
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg';
+            toast.textContent = '상담사 의견이 저장되었습니다.';
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+            
+            // 수정 모드 종료
+            toggleFeedbackEdit();
+        }
+
+        // 페이지 로드 시 초기 설정
+        document.addEventListener('DOMContentLoaded', () => {
+            const textarea = document.getElementById('counselor-feedback');
+            const saveBtn = document.getElementById('save-feedback-btn');
+            
+            // 초기 상태 설정
+            textarea.readOnly = true;
+            saveBtn.style.display = 'none';
+            
+            // 기존 의견이 있다면 불러오기
+            if (counselorFeedback.content) {
+                textarea.value = counselorFeedback.content;
+            }
+        });
+
+        // 상담사 의견 기능 관련 이벤트 리스너 추가
+        if (myResultsBody) {
+            // 상담사 의견 섹션 내 버튼 클릭 이벤트 리스너
+            myResultsBody.addEventListener('click', (event) => {
+                const button = event.target.closest('.save-feedback-btn, .edit-feedback-btn, .delete-feedback-btn');
+                if (!button) return;
+
+                const feedbackSection = button.closest('.counselor-feedback-section');
+                if (!feedbackSection) return;
+
+                const textarea = feedbackSection.querySelector('.counselor-feedback-textarea');
+                const saveBtn = feedbackSection.querySelector('.save-feedback-btn');
+                const editBtn = feedbackSection.querySelector('.edit-feedback-btn');
+                const deleteBtn = feedbackSection.querySelector('.delete-feedback-btn');
+                const statusDiv = feedbackSection.querySelector('.counselor-feedback-status');
+
+                if (!textarea || !saveBtn || !editBtn || !deleteBtn || !statusDiv) {
+                    console.error("상담사 의견 섹션의 요소를 찾을 수 없습니다.");
+                    return;
+                }
+
+                statusDiv.textContent = '';
+
+                // 저장 버튼 클릭 시
+                if (button.classList.contains('save-feedback-btn')) {
+                    textarea.disabled = true;
+                    saveBtn.disabled = true;
+                    editBtn.disabled = false;
+                    deleteBtn.disabled = false;
+                    statusDiv.textContent = '✅ 상담사 의견이 저장되었습니다.';
+                    setTimeout(() => { statusDiv.textContent = ''; }, 3000);
+                    console.log("Counselor feedback saved:", textarea.value);
+                    // TODO: 실제 데이터 저장 로직 추가
+
+                // 수정 버튼 클릭 시
+                } else if (button.classList.contains('edit-feedback-btn')) {
+                    textarea.disabled = false;
+                    saveBtn.disabled = false;
+                    editBtn.disabled = true;
+                    deleteBtn.disabled = true;
+                    textarea.focus();
+                    statusDiv.textContent = '📝 수정 중...';
+                    console.log("Editing counselor feedback...");
+
+                // 삭제 버튼 클릭 시
+                } else if (button.classList.contains('delete-feedback-btn')) {
+                    if (confirm('상담사 의견을 삭제하시겠습니까?')) {
+                        textarea.value = '';
+                        textarea.disabled = false;
+                        saveBtn.disabled = false;
+                        editBtn.disabled = true;
+                        deleteBtn.disabled = true;
+                        statusDiv.textContent = '🗑️ 상담사 의견이 삭제되었습니다.';
+                        setTimeout(() => { statusDiv.textContent = ''; }, 3000);
+                        console.log("Counselor feedback deleted.");
+                        // TODO: 실제 데이터 삭제 로직 추가
+                    }
+                }
+            });
         }
 
     </script>
